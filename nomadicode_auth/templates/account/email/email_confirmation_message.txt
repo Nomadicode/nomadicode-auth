@@ -1,0 +1,8 @@
+{% load account %}{% user_display user as user_display %}{% load i18n %}{% autoescape off %}{% blocktranslate %}Hi {{ user_display }},
+
+Welcome! Please confirm your email address by clicking the link below:
+
+{{ activate_url }}
+
+If you did not sign up, you can safely ignore this email.
+{% endblocktranslate %}{% endautoescape %}

@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+recursive-include nomadicode_auth/templates *
+recursive-include nomadicode_auth/migrations *
+recursive-include nomadicode_auth/users/migrations *
+global-exclude __pycache__
+global-exclude *.py[cod]

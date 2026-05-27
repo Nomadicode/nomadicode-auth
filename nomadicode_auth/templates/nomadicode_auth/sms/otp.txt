@@ -1,0 +1,1 @@
+{% load i18n %}{% blocktranslate %}Your verification code is {{ code }}. It expires in a few minutes. Do not share it with anyone.{% endblocktranslate %}

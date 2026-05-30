@@ -1,5 +1,25 @@
 from allauth.account.models import EmailAddress
-from allauth.account.utils import send_email_confirmation
+
+# Forward-compatible wrapper — `send_email_confirmation` was removed from
+# `allauth.account.utils` in django-allauth ~65.13.
+try:
+    from allauth.account.utils import send_email_confirmation
+except ImportError:  # pragma: no cover - newer allauth
+    from allauth.account.internal.flows.email_verification import (
+        get_address_for_user,
+        send_verification_email_to_address,
+    )
+
+    def send_email_confirmation(request, user, signup=False, email=None):
+        if email:
+            address, _ = EmailAddress.objects.get_or_create(
+                user=user, email=email, defaults={"primary": True}
+            )
+        else:
+            address = get_address_for_user(user)
+            if not address:
+                return False
+        return send_verification_email_to_address(request, address, signup=signup)
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import AllowAny

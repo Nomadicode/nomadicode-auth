@@ -117,23 +117,23 @@ python manage.py migrate
 
 All endpoints live under whatever prefix you mounted (`/auth/` in the example).
 
-| Method | Path | Body |
-| --- | --- | --- |
-| `POST` | `/signup` | `{email, password, ...}` *or* `{phone, password, otp_code, ...}` |
-| `POST` | `/login` | `{identifier, password}` (email or phone) |
-| `POST` | `/logout` | — |
-| `POST` | `/refresh` | `{refresh}` |
-| `GET`  | `/me` | (auth) |
-| `PATCH`| `/me` | `{first_name?, last_name?, ...}` |
-| `POST` | `/verify-email` | `{key}` |
-| `POST` | `/verify-email/resend` | `{email}` |
-| `POST` | `/verify-phone/send` | `{phone, channel?}` |
-| `POST` | `/verify-phone` | `{phone, code}` |
-| `POST` | `/password/reset` | `{email}` |
-| `POST` | `/password/reset/confirm` | `{key, new_password}` |
-| `POST` | `/password/change` | `{old_password, new_password}` |
-| `POST` | `/social/google` | `{id_token}` *or* `{access_token}` |
-| `POST` | `/social/facebook` | `{access_token}` |
+| Method  | Path                      | Body                                                             |
+| ------- | ------------------------- | ---------------------------------------------------------------- |
+| `POST`  | `/signup`                 | `{email, password, ...}` _or_ `{phone, password, otp_code, ...}` |
+| `POST`  | `/login`                  | `{identifier, password}` (email or phone)                        |
+| `POST`  | `/logout`                 | —                                                                |
+| `POST`  | `/refresh`                | `{refresh}`                                                      |
+| `GET`   | `/me`                     | (auth)                                                           |
+| `PATCH` | `/me`                     | `{first_name?, last_name?, ...}`                                 |
+| `POST`  | `/verify-email`           | `{key}`                                                          |
+| `POST`  | `/verify-email/resend`    | `{email}`                                                        |
+| `POST`  | `/verify-phone/send`      | `{phone, channel?}`                                              |
+| `POST`  | `/verify-phone`           | `{phone, code}`                                                  |
+| `POST`  | `/password/reset`         | `{email}`                                                        |
+| `POST`  | `/password/reset/confirm` | `{key, new_password}`                                            |
+| `POST`  | `/password/change`        | `{old_password, new_password}`                                   |
+| `POST`  | `/social/google`          | `{id_token}` _or_ `{access_token}`                               |
+| `POST`  | `/social/facebook`        | `{access_token}`                                                 |
 
 Successful auth endpoints return:
 
@@ -172,12 +172,12 @@ POST /auth/verify-email               { "key": "<key from URL>" }
 
 Built-in:
 
-| Path | Notes |
-| --- | --- |
-| `nomadicode_auth.sms.twilio.TwilioBackend` | Default. Requires `pip install nomadicode-auth[twilio]` and `TWILIO_*` settings. |
-| `nomadicode_auth.sms.console.ConsoleBackend` | Logs to stdout — great for dev. |
-| `nomadicode_auth.sms.dummy.DummyBackend` | No-op, records to `DummyBackend.sent` — use in tests. |
-| `nomadicode_auth.sms.messagebird.MessageBirdBackend` | Example second provider. |
+| Path                                                 | Notes                                                                            |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `nomadicode_auth.sms.twilio.TwilioBackend`           | Default. Requires `pip install nomadicode-auth[twilio]` and `TWILIO_*` settings. |
+| `nomadicode_auth.sms.console.ConsoleBackend`         | Logs to stdout — great for dev.                                                  |
+| `nomadicode_auth.sms.dummy.DummyBackend`             | No-op, records to `DummyBackend.sent` — use in tests.                            |
+| `nomadicode_auth.sms.messagebird.MessageBirdBackend` | Example second provider.                                                         |
 
 ### Writing a custom backend
 

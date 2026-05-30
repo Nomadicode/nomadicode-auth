@@ -1,8 +1,19 @@
 from allauth.headless.tokens.strategies.jwt.internal import (
     create_access_token,
-    rotate_refresh_token,
     validate_refresh_token,
 )
+
+# `rotate_refresh_token` was renamed to `create_refresh_token` in
+# django-allauth ~65.x. Support both so we don't have to pin a specific
+# release of the upstream package.
+try:
+    from allauth.headless.tokens.strategies.jwt.internal import (
+        rotate_refresh_token,
+    )
+except ImportError:  # pragma: no cover - newer allauth
+    from allauth.headless.tokens.strategies.jwt.internal import (
+        create_refresh_token as rotate_refresh_token,
+    )
 from django.contrib.auth import logout as django_logout
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated

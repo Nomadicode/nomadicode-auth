@@ -7,7 +7,28 @@ from tests or admin actions.
 """
 
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
-from allauth.account.utils import send_email_confirmation
+
+# `send_email_confirmation` was removed from `allauth.account.utils` in
+# django-allauth ~65.13. Provide a forward-compatible wrapper around the new
+# `send_verification_email_to_address` API.
+try:
+    from allauth.account.utils import send_email_confirmation
+except ImportError:  # pragma: no cover - newer allauth
+    from allauth.account.internal.flows.email_verification import (
+        get_address_for_user,
+        send_verification_email_to_address,
+    )
+
+    def send_email_confirmation(request, user, signup=False, email=None):
+        if email:
+            address, _ = EmailAddress.objects.get_or_create(
+                user=user, email=email, defaults={"primary": True}
+            )
+        else:
+            address = get_address_for_user(user)
+            if not address:
+                return False
+        return send_verification_email_to_address(request, address, signup=signup)
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.db import IntegrityError, transaction

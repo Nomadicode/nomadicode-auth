@@ -36,8 +36,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from ..conf import frontend_url, settings as pkg_settings
-from ..models import OTPPurpose
-from .otp import verify_phone_otp
+from ..models import OTPChannel, OTPPurpose
+from .otp import send_phone_otp, verify_phone_otp
 
 User = get_user_model()
 
@@ -177,6 +177,32 @@ def reset_password_with_key(*, key: str, new_password: str) -> "User":
 
     if not default_token_generator.check_token(user, token):
         raise AuthError("Invalid or expired reset link.")
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    return user
+
+
+def request_password_reset_otp(*, phone: str, channel: str = OTPChannel.SMS) -> None:
+    """Send a password-reset OTP to ``phone``. No-ops silently if no such user."""
+    user = User.objects.filter(phone=phone).first()
+    if user is None:
+        return
+    send_phone_otp(phone=phone, purpose=OTPPurpose.PASSWORD_RESET, channel=channel)
+
+
+def reset_password_with_otp(*, phone: str, code: str, new_password: str) -> "User":
+    """Verify a password-reset OTP and set the new password.
+
+    Raises ``OTPVerificationFailed`` (propagated from ``verify_phone_otp``) on a
+    bad code; raises ``AuthError`` with the same wording when no user matches the
+    phone, so the response doesn't reveal whether an account exists.
+    """
+    verify_phone_otp(phone=phone, code=code, purpose=OTPPurpose.PASSWORD_RESET)
+
+    user = User.objects.filter(phone=phone).first()
+    if user is None:
+        raise AuthError("Invalid or expired code.")
 
     user.set_password(new_password)
     user.save(update_fields=["password"])

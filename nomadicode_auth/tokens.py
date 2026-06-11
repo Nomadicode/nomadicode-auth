@@ -7,12 +7,27 @@ from allauth.headless.tokens.strategies.jwt.internal import (
     create_refresh_token,
 )
 from django.conf import settings
+from django.contrib.auth import (
+    BACKEND_SESSION_KEY,
+    HASH_SESSION_KEY,
+    SESSION_KEY,
+)
 
 
 def _new_session_for_user(user):
+    """Create a session carrying full Django auth state.
+
+    Refresh-token validation resolves the user through Django's
+    ``auth.get_user()``, which needs the backend path and the session
+    auth hash in addition to the user id — a bare ``_auth_user_id``
+    yields AnonymousUser and refresh fails. Mirrors ``auth.login()``
+    without the request/signal machinery.
+    """
     engine = import_module(settings.SESSION_ENGINE)
     session = engine.SessionStore()
-    session["_auth_user_id"] = str(user.pk)
+    session[SESSION_KEY] = user._meta.pk.value_to_string(user)
+    session[BACKEND_SESSION_KEY] = "django.contrib.auth.backends.ModelBackend"
+    session[HASH_SESSION_KEY] = user.get_session_auth_hash()
     session.save()
     return session
 

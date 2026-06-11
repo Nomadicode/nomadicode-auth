@@ -3,6 +3,13 @@ from allauth.headless.tokens.strategies.jwt.internal import (
     validate_refresh_token,
 )
 
+try:
+    from allauth.headless.tokens.strategies.jwt.internal import (
+        invalidate_refresh_token,
+    )
+except ImportError:  # pragma: no cover - older allauth rotates internally
+    invalidate_refresh_token = None
+
 # `rotate_refresh_token` was renamed to `create_refresh_token` in
 # django-allauth ~65.x. Support both so we don't have to pin a specific
 # release of the upstream package.
@@ -35,6 +42,18 @@ from ..services import (
     signup_with_phone,
 )
 from ._common import APIError, token_response
+
+
+def _strategy_claims(user) -> dict:
+    """Claims from the configured HEADLESS_TOKEN_STRATEGY, so tokens minted
+    on refresh carry the same custom claims (e.g. ``user_id``) as the ones
+    minted at login. ``claims`` became a required positional argument of
+    ``create_access_token`` in django-allauth ~65.x."""
+    from allauth.headless import app_settings as headless_settings
+
+    strategy = headless_settings.TOKEN_STRATEGY
+    get_claims = getattr(strategy, "get_claims", None)
+    return get_claims(user) if get_claims else {}
 
 
 class SignupView(APIView):
@@ -139,11 +158,18 @@ class RefreshTokenView(APIView):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 code="invalid_refresh",
             )
-        user, session, _payload = result
-        access = create_access_token(user, session)
-        new_refresh = (
-            rotate_refresh_token(user, session) if pkg_settings.JWT_ROTATE_REFRESH else refresh
-        )
+        user, session, payload = result
+        access = create_access_token(user, session, _strategy_claims(user))
+        if pkg_settings.JWT_ROTATE_REFRESH:
+            if invalidate_refresh_token is not None:
+                invalidate_refresh_token(session, payload)
+            new_refresh = rotate_refresh_token(user, session)
+        else:
+            new_refresh = refresh
+        # create/invalidate mutate nested session state without flagging the
+        # session as modified — persist explicitly or the rotated token's
+        # server-side state is lost and the next refresh 401s.
+        session.save()
         return Response({"access": access, "refresh": new_refresh})
 
 

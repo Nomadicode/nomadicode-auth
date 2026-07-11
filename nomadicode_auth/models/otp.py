@@ -37,7 +37,9 @@ def _generate_code(length: int) -> str:
 class OTPCode(models.Model):
     phone = models.CharField(max_length=48, db_index=True)
     purpose = models.CharField(max_length=32, choices=OTPPurpose.choices)
-    channel = models.CharField(max_length=16, choices=OTPChannel.choices, default=OTPChannel.SMS)
+    channel = models.CharField(
+        max_length=16, choices=OTPChannel.choices, default=OTPChannel.SMS
+    )
     code_hash = models.CharField(max_length=128)
     attempts = models.PositiveIntegerField(default=0)
     consumed_at = models.DateTimeField(null=True, blank=True)

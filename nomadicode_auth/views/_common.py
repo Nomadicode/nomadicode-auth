@@ -23,7 +23,9 @@ class APIError(APIException):
     default_detail = "Bad request."
     default_code = "bad_request"
 
-    def __init__(self, message: str, *, code: str | None = None, status_code: int | None = None):
+    def __init__(
+        self, message: str, *, code: str | None = None, status_code: int | None = None
+    ):
         if status_code is not None:
             self.status_code = status_code
         super().__init__(detail=message, code=code or self.default_code)

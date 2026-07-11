@@ -11,7 +11,10 @@ class IsVerified(BasePermission):
         return bool(
             user
             and user.is_authenticated
-            and (getattr(user, "email_verified", False) or getattr(user, "phone_verified", False))
+            and (
+                getattr(user, "email_verified", False)
+                or getattr(user, "phone_verified", False)
+            )
         )
 
 
@@ -20,7 +23,9 @@ class IsEmailVerified(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        return bool(user and user.is_authenticated and getattr(user, "email_verified", False))
+        return bool(
+            user and user.is_authenticated and getattr(user, "email_verified", False)
+        )
 
 
 class IsPhoneVerified(BasePermission):
@@ -28,4 +33,6 @@ class IsPhoneVerified(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        return bool(user and user.is_authenticated and getattr(user, "phone_verified", False))
+        return bool(
+            user and user.is_authenticated and getattr(user, "phone_verified", False)
+        )

@@ -48,7 +48,9 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if bool(attrs.get("email")) == bool(attrs.get("phone")):
-            raise serializers.ValidationError("Provide exactly one of 'email' or 'phone'.")
+            raise serializers.ValidationError(
+                "Provide exactly one of 'email' or 'phone'."
+            )
         return attrs
 
 

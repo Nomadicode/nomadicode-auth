@@ -2,7 +2,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
     dependencies = []
 
@@ -10,7 +9,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="OTPCode",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("phone", models.CharField(db_index=True, max_length=48)),
                 (
                     "purpose",

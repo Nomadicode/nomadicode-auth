@@ -51,7 +51,9 @@ urlpatterns = [
     path("verify-email", EmailConfirmView.as_view(), name="verify-email"),
     path("verify-email/resend", EmailResendView.as_view(), name="verify-email-resend"),
     path("verify-phone", PhoneVerifyConfirmView.as_view(), name="verify-phone"),
-    path("verify-phone/send", PhoneVerifyRequestView.as_view(), name="verify-phone-send"),
+    path(
+        "verify-phone/send", PhoneVerifyRequestView.as_view(), name="verify-phone-send"
+    ),
     path("password/reset", PasswordResetRequestView.as_view(), name="password-reset"),
     path(
         "password/reset/confirm",

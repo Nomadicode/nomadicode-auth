@@ -88,7 +88,9 @@ class SignupView(APIView):
                 },
                 status=status.HTTP_201_CREATED,
             )
-        return Response(token_response(user, request=request), status=status.HTTP_201_CREATED)
+        return Response(
+            token_response(user, request=request), status=status.HTTP_201_CREATED
+        )
 
     def _phone_signup(self, request):
         ser = PhoneSignupSerializer(data=request.data)
@@ -97,7 +99,9 @@ class SignupView(APIView):
             user = signup_with_phone(**ser.validated_data)
         except AuthError as exc:
             raise APIError(str(exc))
-        return Response(token_response(user, request=request), status=status.HTTP_201_CREATED)
+        return Response(
+            token_response(user, request=request), status=status.HTTP_201_CREATED
+        )
 
 
 class LoginView(APIView):
@@ -179,7 +183,9 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(UserMeSerializer(request.user, context={"request": request}).data)
+        return Response(
+            UserMeSerializer(request.user, context={"request": request}).data
+        )
 
     def patch(self, request):
         ser = UserMeSerializer(

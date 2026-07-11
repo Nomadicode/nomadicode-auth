@@ -27,7 +27,10 @@ def send_phone_otp(
     purpose: str = OTPPurpose.VERIFY_PHONE,
     channel: str = OTPChannel.SMS,
 ) -> OTPCode:
-    if OTPCode.recent_request_count(phone=phone) >= pkg_settings.OTP_RATE_LIMIT_PER_HOUR:
+    if (
+        OTPCode.recent_request_count(phone=phone)
+        >= pkg_settings.OTP_RATE_LIMIT_PER_HOUR
+    ):
         raise OTPRateLimited("Too many OTP requests; try again later.")
 
     row, code = OTPCode.issue(phone=phone, purpose=purpose, channel=channel)
@@ -41,7 +44,9 @@ def send_phone_otp(
     return row
 
 
-def verify_phone_otp(*, phone: str, code: str, purpose: str = OTPPurpose.VERIFY_PHONE) -> bool:
+def verify_phone_otp(
+    *, phone: str, code: str, purpose: str = OTPPurpose.VERIFY_PHONE
+) -> bool:
     ok = OTPCode.verify(phone=phone, purpose=purpose, code=code)
     if not ok:
         raise OTPVerificationFailed("Invalid or expired code.")

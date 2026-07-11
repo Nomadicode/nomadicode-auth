@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nomadicode-auth"
-version = "0.1.3"
+version = "0.2.0"
 description = "Batteries-included Django auth on top of allauth: email/phone signup, JWT, Google/Facebook, pluggable SMS backends."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -42,6 +42,11 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/nomadicode/nomadicode-auth"
 Issues = "https://github.com/nomadicode/nomadicode-auth/issues"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = ["."]
+testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 include = ["nomadicode_auth*"]

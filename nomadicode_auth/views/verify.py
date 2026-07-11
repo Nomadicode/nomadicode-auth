@@ -20,6 +20,8 @@ except ImportError:  # pragma: no cover - newer allauth
             if not address:
                 return False
         return send_verification_email_to_address(request, address, signup=signup)
+
+
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -56,7 +58,7 @@ class EmailConfirmView(APIView):
         ser = EmailConfirmSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         try:
-            user = confirm_email_key(ser.validated_data["key"])
+            user = confirm_email_key(ser.validated_data["key"], request=request)
         except AuthError as exc:
             raise APIError(str(exc))
         return Response(token_response(user, request=request))
@@ -72,11 +74,17 @@ class EmailResendView(APIView):
         ser = EmailResendSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         email = ser.validated_data["email"]
-        address = EmailAddress.objects.filter(email__iexact=email).select_related("user").first()
+        address = (
+            EmailAddress.objects.filter(email__iexact=email)
+            .select_related("user")
+            .first()
+        )
         if address and not address.verified:
             send_email_confirmation(request, address.user, signup=False, email=email)
         # Always 200 to avoid email enumeration.
-        return Response({"detail": "If the account exists, a confirmation email was sent."})
+        return Response(
+            {"detail": "If the account exists, a confirmation email was sent."}
+        )
 
 
 class PhoneVerifyRequestView(APIView):

@@ -13,6 +13,7 @@ from typing import Callable
 
 import jwt
 import requests
+from allauth.socialaccount.adapter import get_adapter as get_social_adapter
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -54,7 +55,9 @@ def register_verifier(provider: str):
 
 
 @register_verifier("google")
-def _verify_google(*, id_token: str | None = None, access_token: str | None = None, **_):
+def _verify_google(
+    *, id_token: str | None = None, access_token: str | None = None, **_
+):
     if id_token:
         app = _require_app("google")
         try:
@@ -143,6 +146,7 @@ def _verify_facebook(*, access_token: str | None = None, **_):
 
 # ---- main entry point ----
 
+
 @transaction.atomic
 def login_with_provider_token(*, provider: str, request=None, **token_kwargs):
     if provider not in pkg_settings.SOCIAL_PROVIDERS:
@@ -159,17 +163,22 @@ def login_with_provider_token(*, provider: str, request=None, **token_kwargs):
 
 # ---- helpers ----
 
+
 def _require_app(provider: str) -> SocialApp:
-    app = SocialApp.objects.filter(provider=provider).first()
-    if app is None:
+    # The adapter blends DB SocialApp rows with settings-backed apps
+    # (SOCIALACCOUNT_PROVIDERS / NOMADICODE_AUTH["SOCIAL"]).
+    try:
+        return get_social_adapter().get_app(None, provider=provider)
+    except SocialApp.DoesNotExist:
         raise SocialLoginFailed(f"No SocialApp configured for '{provider}'.")
-    return app
 
 
 def _get_or_create_user(provider: str, profile: dict):
-    existing_link = SocialAccount.objects.filter(
-        provider=provider, uid=profile["uid"]
-    ).select_related("user").first()
+    existing_link = (
+        SocialAccount.objects.filter(provider=provider, uid=profile["uid"])
+        .select_related("user")
+        .first()
+    )
     if existing_link:
         return existing_link.user, False
 
@@ -214,9 +223,10 @@ def _link_social_account(user, provider: str, profile: dict, token_kwargs: dict)
     )
     raw_token = token_kwargs.get("access_token") or token_kwargs.get("id_token")
     if raw_token:
+        # Settings-backed apps are unsaved instances — SocialToken.app is
+        # nullable precisely for that case.
         app = SocialApp.objects.filter(provider=provider).first()
-        if app:
-            SocialToken.objects.update_or_create(
-                app=app, account=link, defaults={"token": raw_token}
-            )
+        SocialToken.objects.update_or_create(
+            app=app, account=link, defaults={"token": raw_token}
+        )
     return link

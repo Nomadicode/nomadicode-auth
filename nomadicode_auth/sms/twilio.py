@@ -1,6 +1,7 @@
 """Twilio SMS backend.
 
-Reads:
+Reads (from ``NOMADICODE_AUTH["SMS"]``, falling back to top-level
+Django settings of the same name):
     TWILIO_ACCOUNT_SID
     TWILIO_AUTH_TOKEN
     TWILIO_PHONE_FROM     (default sender, optional if you pass ``from_=``)
@@ -9,8 +10,7 @@ Reads:
 Install with: ``pip install nomadicode-auth[twilio]``
 """
 
-from django.conf import settings as django_settings
-
+from ..conf import sms_option
 from .base import BaseSmsBackend, SmsSendError
 
 
@@ -24,17 +24,13 @@ class TwilioBackend(BaseSmsBackend):
                 "install with `pip install nomadicode-auth[twilio]`."
             ) from exc
 
-        sid = getattr(django_settings, "TWILIO_ACCOUNT_SID", "")
-        token = getattr(django_settings, "TWILIO_AUTH_TOKEN", "")
+        sid = sms_option("TWILIO_ACCOUNT_SID")
+        token = sms_option("TWILIO_AUTH_TOKEN")
         if not sid or not token:
-            raise SmsSendError(
-                "TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be set."
-            )
+            raise SmsSendError("TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be set.")
         self._client = Client(sid, token)
-        self._default_from = getattr(django_settings, "TWILIO_PHONE_FROM", "") or None
-        self._messaging_service_sid = (
-            getattr(django_settings, "TWILIO_MESSAGING_SERVICE_SID", "") or None
-        )
+        self._default_from = sms_option("TWILIO_PHONE_FROM") or None
+        self._messaging_service_sid = sms_option("TWILIO_MESSAGING_SERVICE_SID") or None
 
     def send(self, *, to: str, body: str, from_: str | None = None) -> dict:
         kwargs = {"to": to, "body": body}

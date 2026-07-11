@@ -1,6 +1,7 @@
 """MessageBird SMS backend — example second provider.
 
-Reads:
+Reads (from ``NOMADICODE_AUTH["SMS"]``, falling back to top-level
+Django settings of the same name):
     MESSAGEBIRD_ACCESS_KEY
     MESSAGEBIRD_ORIGINATOR  (default sender id / number, optional if you pass from_)
 """
@@ -8,8 +9,8 @@ Reads:
 import json
 
 import requests
-from django.conf import settings as django_settings
 
+from ..conf import sms_option
 from .base import BaseSmsBackend, SmsSendError
 
 API_URL = "https://rest.messagebird.com/messages"
@@ -17,10 +18,10 @@ API_URL = "https://rest.messagebird.com/messages"
 
 class MessageBirdBackend(BaseSmsBackend):
     def __init__(self):
-        self._key = getattr(django_settings, "MESSAGEBIRD_ACCESS_KEY", "")
+        self._key = sms_option("MESSAGEBIRD_ACCESS_KEY")
         if not self._key:
             raise SmsSendError("MESSAGEBIRD_ACCESS_KEY must be set.")
-        self._default_from = getattr(django_settings, "MESSAGEBIRD_ORIGINATOR", "") or None
+        self._default_from = sms_option("MESSAGEBIRD_ORIGINATOR") or None
 
     def send(self, *, to: str, body: str, from_: str | None = None) -> dict:
         sender = from_ or self._default_from
@@ -34,7 +35,9 @@ class MessageBirdBackend(BaseSmsBackend):
                     "Authorization": f"AccessKey {self._key}",
                     "Content-Type": "application/json",
                 },
-                data=json.dumps({"originator": sender, "recipients": [to], "body": body}),
+                data=json.dumps(
+                    {"originator": sender, "recipients": [to], "body": body}
+                ),
                 timeout=10,
             )
             resp.raise_for_status()

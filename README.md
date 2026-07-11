@@ -58,42 +58,41 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
-# allauth account config
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_ADAPTER = "nomadicode_auth.adapters.NomadicodeAccountAdapter"
-SOCIALACCOUNT_ADAPTER = "nomadicode_auth.adapters.NomadicodeSocialAccountAdapter"
-SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
-
-# allauth headless — used to mint our JWTs
-HEADLESS_ONLY = True
-HEADLESS_TOKEN_STRATEGY = "nomadicode_auth.token_strategy.NomadicodeJWTTokenStrategy"
-HEADLESS_JWT_ALGORITHM = "HS256"   # signs with SECRET_KEY; switch to RS256 if you need external verification
-
-# Package configuration — everything has a sensible default
+# Package configuration — the ONLY block you need. Everything has a
+# sensible default; an empty dict works for dev.
 NOMADICODE_AUTH = {
     "FRONTEND_URL": os.environ["FRONTEND_URL"],          # e.g. https://app.example.com
     "REQUIRE_VERIFIED_EMAIL": True,
     "REQUIRE_VERIFIED_PHONE": True,
-    "SOCIAL_PROVIDERS": ("google", "facebook"),          # remove or extend
     "JWT_ACCESS_TTL": 60 * 60,
     "JWT_REFRESH_TTL": 60 * 60 * 24 * 7,
-}
+    "JWT_ALGORITHM": "HS256",   # signs with SECRET_KEY; switch to RS256 if you need external verification
 
-# SMS — Twilio by default. Swap to any registered backend.
-SMS_BACKEND = "nomadicode_auth.sms.twilio.TwilioBackend"
-TWILIO_ACCOUNT_SID = os.environ["TWILIO_ACCOUNT_SID"]
-TWILIO_AUTH_TOKEN = os.environ["TWILIO_AUTH_TOKEN"]
-TWILIO_PHONE_FROM = os.environ["TWILIO_PHONE_FROM"]
+    # SMS — Twilio by default. Swap BACKEND for any registered backend;
+    # backend options live right here too.
+    "SMS": {
+        "BACKEND": "nomadicode_auth.sms.twilio.TwilioBackend",
+        "TWILIO_ACCOUNT_SID": os.environ["TWILIO_ACCOUNT_SID"],
+        "TWILIO_AUTH_TOKEN": os.environ["TWILIO_AUTH_TOKEN"],
+        "TWILIO_PHONE_FROM": os.environ["TWILIO_PHONE_FROM"],
+    },
 
-# Social provider apps
-SOCIALACCOUNT_PROVIDERS = {
-    "google":   {"APP": {"client_id": os.environ["GOOGLE_CLIENT_ID"],   "secret": os.environ["GOOGLE_CLIENT_SECRET"]}},
-    "facebook": {"APP": {"client_id": os.environ["FACEBOOK_APP_ID"],    "secret": os.environ["FACEBOOK_APP_SECRET"]}},
+    # Social login — providers listed here get a /auth/social/<provider>/
+    # endpoint and their credentials are wired into allauth automatically
+    # (no SocialApp rows, no SOCIALACCOUNT_PROVIDERS).
+    "SOCIAL": {
+        "google":   {"client_id": os.environ["GOOGLE_CLIENT_ID"], "secret": os.environ["GOOGLE_CLIENT_SECRET"]},
+        "facebook": {"client_id": os.environ["FACEBOOK_APP_ID"],  "secret": os.environ["FACEBOOK_APP_SECRET"]},
+    },
 }
 ```
+
+That's it. At startup the package injects the allauth account/headless
+settings it needs (`ACCOUNT_*`, `HEADLESS_*`, `SOCIALACCOUNT_*`) with
+correct defaults — email login, mandatory verification when
+`REQUIRE_VERIFIED_EMAIL`, the package adapters and JWT token strategy,
+and `SOCIALACCOUNT_PROVIDERS` built from `"SOCIAL"`. Define any of those
+settings yourself in `settings.py` and your value wins.
 
 ## 2. URLs
 
@@ -172,12 +171,12 @@ POST /auth/verify-email               { "key": "<key from URL>" }
 
 Built-in:
 
-| Path                                                 | Notes                                                                            |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `nomadicode_auth.sms.twilio.TwilioBackend`           | Default. Requires `pip install nomadicode-auth[twilio]` and `TWILIO_*` settings. |
-| `nomadicode_auth.sms.console.ConsoleBackend`         | Logs to stdout — great for dev.                                                  |
-| `nomadicode_auth.sms.dummy.DummyBackend`             | No-op, records to `DummyBackend.sent` — use in tests.                            |
-| `nomadicode_auth.sms.messagebird.MessageBirdBackend` | Example second provider.                                                         |
+| Path                                                 | Notes                                                                             |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `nomadicode_auth.sms.twilio.TwilioBackend`           | Default. Requires `pip install nomadicode-auth[twilio]` + `TWILIO_*` SMS options. |
+| `nomadicode_auth.sms.console.ConsoleBackend`         | Logs to stdout — great for dev.                                                   |
+| `nomadicode_auth.sms.dummy.DummyBackend`             | No-op, records to `DummyBackend.sent` — use in tests.                             |
+| `nomadicode_auth.sms.messagebird.MessageBirdBackend` | Example second provider.                                                          |
 
 ### Writing a custom backend
 
@@ -198,13 +197,16 @@ class VonageBackend(BaseSmsBackend):
 
 ```python
 # settings.py
-SMS_BACKEND = "myproject.sms.vonage.VonageBackend"
+NOMADICODE_AUTH = {
+    ...,
+    "SMS": {"BACKEND": "myproject.sms.vonage.VonageBackend"},
+}
 ```
 
 ## 8. Adding a social provider
 
 1. Install the allauth provider app (e.g. `allauth.socialaccount.providers.apple`).
-2. Add a `SocialApp` row (admin or fixture) with `client_id` and `secret`.
+2. Add its credentials under `NOMADICODE_AUTH["SOCIAL"]` (or add a `SocialApp` row via admin/fixture instead).
 3. Register a verifier:
 
 ```python
@@ -229,7 +231,11 @@ def verify_apple(*, id_token, **_):
 # settings.py
 NOMADICODE_AUTH = {
     ...,
-    "SOCIAL_PROVIDERS": ("google", "facebook", "apple"),
+    "SOCIAL": {
+        "google":   {"client_id": "...", "secret": "..."},
+        "facebook": {"client_id": "...", "secret": "..."},
+        "apple":    {"client_id": "...", "secret": "..."},
+    },
 }
 ```
 

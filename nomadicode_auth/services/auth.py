@@ -29,6 +29,8 @@ except ImportError:  # pragma: no cover - newer allauth
             if not address:
                 return False
         return send_verification_email_to_address(request, address, signup=signup)
+
+
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.db import IntegrityError, transaction
@@ -54,6 +56,7 @@ class LoginRequiresVerification(AuthError):
 
 
 # ---------- signup ----------
+
 
 @transaction.atomic
 def signup_with_email(*, email: str, password: str, request=None, **extra) -> "User":
@@ -85,6 +88,7 @@ def signup_with_phone(*, phone: str, password: str, otp_code: str, **extra) -> "
 
 
 # ---------- login ----------
+
 
 def login_with_credentials(*, identifier: str, password: str, request=None) -> "User":
     """Identifier may be email or phone. Enforces verification policy."""
@@ -128,11 +132,30 @@ def _enforce_verification(user, identifier: str) -> None:
 
 # ---------- email verification ----------
 
-def confirm_email_key(key: str) -> "User":
+
+def _headless_stub_request():
+    """Request stand-in for out-of-request confirmation (shell, tasks).
+
+    allauth's verification flow posts a django.contrib.messages message to
+    the request, which blows up without middleware. Marking the request as
+    headless makes allauth skip messages entirely.
+    """
+    from types import SimpleNamespace
+
+    from django.http import HttpRequest
+
+    request = HttpRequest()
+    request.allauth = SimpleNamespace(headless=SimpleNamespace(client="app"))
+    return request
+
+
+def confirm_email_key(key: str, request=None) -> "User":
     confirmation = EmailConfirmationHMAC.from_key(key)
     if confirmation is None:
         raise AuthError("Invalid or expired confirmation link.")
-    confirmation.confirm(request=None)
+    confirmation.confirm(
+        request=request if request is not None else _headless_stub_request()
+    )
     email = confirmation.email_address
     user = email.user
     if hasattr(user, "email_verified") and not user.email_verified:
@@ -142,6 +165,7 @@ def confirm_email_key(key: str) -> "User":
 
 
 # ---------- password reset ----------
+
 
 def request_password_reset(*, email: str) -> str | None:
     """Return the reset URL (also emailed). Returns None silently if no such user."""
@@ -158,7 +182,9 @@ def request_password_reset(*, email: str) -> str | None:
     from allauth.account.adapter import get_adapter
 
     get_adapter().send_mail(
-        "account/email/password_reset_key", email, {"password_reset_url": url, "user": user}
+        "account/email/password_reset_key",
+        email,
+        {"password_reset_url": url, "user": user},
     )
     return url
 

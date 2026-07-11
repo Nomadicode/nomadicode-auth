@@ -8,4 +8,8 @@ class NomadicodeAuthConfig(AppConfig):
     verbose_name = "Nomadicode Auth"
 
     def ready(self):
+        from .defaults import apply_default_settings
+
+        apply_default_settings()
+
         from . import signals  # noqa: F401

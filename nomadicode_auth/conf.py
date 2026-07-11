@@ -30,16 +30,27 @@ DEFAULTS = {
     "OTP_TTL_SECONDS": 5 * 60,
     "OTP_MAX_ATTEMPTS": 5,
     "OTP_RATE_LIMIT_PER_HOUR": 5,
-    # Social providers we wire up by default. Projects can add/remove
-    # by setting NOMADICODE_AUTH["SOCIAL_PROVIDERS"]; the package only
-    # exposes /auth/social/<provider>/ for entries listed here.
+    # Social login config: provider -> credentials, e.g.
+    #   "SOCIAL": {"google": {"client_id": "...", "secret": "..."}}
+    # The listed providers get a /auth/social/<provider>/ endpoint and
+    # their credentials are injected into SOCIALACCOUNT_PROVIDERS.
+    # ``SOCIAL_PROVIDERS`` (a plain tuple of names) still works for
+    # projects that keep credentials in SocialApp rows instead.
+    "SOCIAL": {},
     "SOCIAL_PROVIDERS": ("google", "facebook"),
     # Email "from" used by the package's mailer adapter.
     "EMAIL_SUBJECT_PREFIX": "",
-    # SMS backend (dotted module path). Convention mirrors Django's
-    # EMAIL_BACKEND. The top-level ``SMS_BACKEND`` setting takes
-    # precedence so projects can write ``SMS_BACKEND = "..."``
-    # directly without nesting it under NOMADICODE_AUTH.
+    # SMS config lives in one dict: ``BACKEND`` (dotted path) plus any
+    # backend-specific options, e.g.
+    #   "SMS": {
+    #       "BACKEND": "nomadicode_auth.sms.twilio.TwilioBackend",
+    #       "TWILIO_ACCOUNT_SID": "...",
+    #       "TWILIO_AUTH_TOKEN": "...",
+    #       "TWILIO_PHONE_FROM": "+1...",
+    #   }
+    # Legacy spellings keep working: a top-level ``SMS_BACKEND`` /
+    # ``TWILIO_*`` setting or NOMADICODE_AUTH["SMS_BACKEND"].
+    "SMS": {},
     "SMS_BACKEND": "nomadicode_auth.sms.twilio.TwilioBackend",
 }
 
@@ -48,14 +59,21 @@ class _Settings:
     """Tiny accessor — `from nomadicode_auth.conf import settings`."""
 
     def __getattr__(self, name):
+        overrides = self._user_overrides()
         if name == "SMS_BACKEND":
-            return getattr(
-                django_settings,
-                "SMS_BACKEND",
-                self._user_overrides().get("SMS_BACKEND", DEFAULTS["SMS_BACKEND"]),
+            return (
+                (overrides.get("SMS") or {}).get("BACKEND")
+                or getattr(django_settings, "SMS_BACKEND", None)
+                or overrides.get("SMS_BACKEND", DEFAULTS["SMS_BACKEND"])
             )
+        if name == "SOCIAL_PROVIDERS":
+            if "SOCIAL_PROVIDERS" in overrides:
+                return overrides["SOCIAL_PROVIDERS"]
+            if overrides.get("SOCIAL"):
+                return tuple(overrides["SOCIAL"])
+            return DEFAULTS["SOCIAL_PROVIDERS"]
         if name in DEFAULTS:
-            return self._user_overrides().get(name, DEFAULTS[name])
+            return overrides.get(name, DEFAULTS[name])
         raise AttributeError(name)
 
     @staticmethod
@@ -64,6 +82,15 @@ class _Settings:
 
 
 settings = _Settings()
+
+
+def sms_option(name: str, default: str = "") -> str:
+    """Backend option lookup: NOMADICODE_AUTH["SMS"][name] first, then the
+    legacy top-level Django setting of the same name (e.g. TWILIO_AUTH_TOKEN)."""
+    sms = settings.SMS or {}
+    if name in sms:
+        return sms[name]
+    return getattr(django_settings, name, default)
 
 
 def frontend_url(path_template: str = "", **kwargs) -> str:

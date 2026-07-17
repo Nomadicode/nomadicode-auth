@@ -20,6 +20,11 @@ DEFAULTS = {
     "LOGIN_METHODS": ("email", "phone"),  # any subset of email/phone/username
     "REQUIRE_VERIFIED_EMAIL": True,
     "REQUIRE_VERIFIED_PHONE": True,
+    # When True, phone signup requires a verified OTP code (the account is
+    # created with phone_verified=True). Set False to allow password-only phone
+    # signup with no verification — the account is created unverified and can be
+    # verified later via /verify-phone/send.
+    "REQUIRE_PHONE_SIGNUP_OTP": True,
     # JWT lifetimes (seconds).
     "JWT_ACCESS_TTL": 60 * 60,
     "JWT_REFRESH_TTL": 60 * 60 * 24 * 7,

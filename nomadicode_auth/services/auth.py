@@ -76,13 +76,24 @@ def signup_with_email(*, email: str, password: str, request=None, **extra) -> "U
 
 
 @transaction.atomic
-def signup_with_phone(*, phone: str, password: str, otp_code: str, **extra) -> "User":
-    """Verify the phone OTP first, then create the user with phone_verified=True."""
-    verify_phone_otp(phone=phone, code=otp_code, purpose=OTPPurpose.VERIFY_PHONE)
+def signup_with_phone(
+    *, phone: str, password: str, otp_code: str = "", **extra
+) -> "User":
+    """Create a phone user.
+
+    When an ``otp_code`` is supplied it's verified first and the account is
+    created with ``phone_verified=True``. When it's omitted (only allowed while
+    ``REQUIRE_PHONE_SIGNUP_OTP`` is off — the serializer enforces presence
+    otherwise) the account is created unverified and can be verified later.
+    """
+    phone_verified = False
+    if otp_code:
+        verify_phone_otp(phone=phone, code=otp_code, purpose=OTPPurpose.VERIFY_PHONE)
+        phone_verified = True
     if User.objects.filter(phone=phone).exists():
         raise AuthError("An account with this phone already exists.")
     user = User.objects.create_user(
-        phone=phone, password=password, phone_verified=True, **extra
+        phone=phone, password=password, phone_verified=phone_verified, **extra
     )
     return user
 

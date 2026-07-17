@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from ..conf import settings as pkg_settings
 from ..models import OTPChannel
 
 User = get_user_model()
@@ -21,13 +22,21 @@ class EmailSignupSerializer(serializers.Serializer):
 class PhoneSignupSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=48)
     password = serializers.CharField(write_only=True, min_length=8)
-    otp_code = serializers.CharField(max_length=12)
+    # Only required when REQUIRE_PHONE_SIGNUP_OTP is on; enforced in validate().
+    otp_code = serializers.CharField(max_length=12, required=False, allow_blank=True)
     first_name = serializers.CharField(required=False, allow_blank=True, max_length=128)
     last_name = serializers.CharField(required=False, allow_blank=True, max_length=128)
 
     def validate_password(self, value):
         validate_password(value)
         return value
+
+    def validate(self, attrs):
+        if pkg_settings.REQUIRE_PHONE_SIGNUP_OTP and not attrs.get("otp_code"):
+            raise serializers.ValidationError(
+                {"otp_code": "This field is required."}
+            )
+        return attrs
 
 
 class LoginSerializer(serializers.Serializer):
